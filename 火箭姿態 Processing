@@ -1,0 +1,45 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+// ===== 引腳定義 (建議與發射端一致) =====
+#define LORA_CS    2
+#define LORA_RST   0
+#define LORA_DIO0  35
+
+// S3 的 SPI 腳位
+#define SCK     14
+#define MISO    12
+#define MOSI    13
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial);
+
+  // 初始化 SPI
+  SPI.begin(SCK, MISO, MOSI, LORA_CS);
+
+  // 初始化 LoRa
+  LoRa.setPins(LORA_CS, LORA_RST, LORA_DIO0);
+
+  if (!LoRa.begin(433E6)) {
+    // 這裡的錯誤訊息沒關係，因為只有啟動時會出現一次
+    Serial.println("❌ LoRa 初始化失敗");
+    while (1);
+  }
+  // 啟動成功後，就不要再印任何非數據的文字了
+}
+
+void loop() {
+  int packetSize = LoRa.parsePacket();
+
+  if (packetSize) {
+    String incoming = "";
+    while (LoRa.available()) {
+      incoming += (char)LoRa.read();
+    }
+
+    // --- 關鍵修正：只輸出收到的原始數據 ---
+    // 這樣 Processing 才會收到像 "P,10.2,R,5.0,Y,0" 這樣的純淨字串
+    Serial.println(incoming); 
+  }
+}
